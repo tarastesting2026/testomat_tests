@@ -48,6 +48,60 @@ def test_should_be_possible_to_open_free_project(page: Page, login):
     expect(page.get_by_text("You have not created any projects yet")).to_be_visible(timeout=10000)
 
 
+def test_registered_email_is_correct(page: Page, configs: Config, login):
+    page.locator("#user-menu-button").click()
+    expect(page.locator(".auth-header-nav-right-dropdown-menu-block-email")).to_have_text(configs.email)
+
+
+def test_create_new_project(page: Page, login):
+    page.get_by_role("link", name="Create").click()
+
+    project_name = Faker().address()
+    suite_name = Faker().word()
+    test_name = Faker().word()
+    sidebar_settings_button = "a:has(svg.md-icon-cog)"
+
+    page.locator("#user-menu-button").click()
+    expect(page.locator(".auth-header-nav-right-dropdown-menu-block-email")) \
+        .to_have_text("taras.testing.2026@gmail.com")
+
+    page.get_by_placeholder("My Project").fill(project_name)
+    page.locator('input[value="Create"]').click()
+    page.get_by_text("I got it, let's start!").click()
+
+    expect(page.locator(".sticky-header h2")).to_have_text(project_name)
+
+    page.get_by_placeholder("First Suite").fill(suite_name)
+    page.get_by_role("button", name="Suite").click()
+
+    expect(page.locator("span.mr-1")).to_contain_text(suite_name)
+
+    page.get_by_role("link", name="New test").click()
+
+    input_field = page.get_by_placeholder("Enter test name")
+    input_field.fill(test_name)
+    input_field.press("Enter")
+
+    expect(page.get_by_text(test_name, exact=True)).to_be_visible()
+
+    page.locator(sidebar_settings_button).click()
+
+    # Click the "Administration" button and confirm the popup
+    page.on("dialog", lambda dialog: dialog.accept())
+    page.get_by_role("button", name="Administration").click()
+
+    # Click the "Delete Project" button and confirm the popup
+    page.on("dialog", lambda dialog: dialog.accept())
+    page.get_by_role("button", name="Delete Project").click()
+
+    expect(page.get_by_text("Project will be deleted in few minutes")).to_be_visible()
+
+    page.locator("button.btn-open").click()
+    page.locator("a.logo-full").click()
+
+    expect(page.get_by_text(project_name)).not_to_be_visible()
+
+
 def search_for_project(page: Page, target_project: str):
     expect(page.get_by_role("searchbox", name="Search")).to_be_visible()
     page.locator("#content-desktop #search").fill(target_project)
