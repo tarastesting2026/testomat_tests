@@ -1,40 +1,40 @@
-from src.web.pages.NewProjectsPage import NewProjectsPage
-from src.web.pages.ProjectPage import ProjectPage
+from faker import Faker
+
+from src.web.Application import Application
 
 TARGET_PROJECT = "ZDc"
-from playwright.sync_api import Page
-from faker import Faker
 
 faker = Faker()
 
 
-def test_login_with_valid_creds(page: Page, login):
+def test_login_with_valid_creds(app: Application, login):
     target_project_name = Faker().company()
 
-    (NewProjectsPage(page)
+    (app.new_projects_page
      .open().is_loaded()
      .fill_project_title(target_project_name)
      .click_create())
 
-    (ProjectPage(page)
+    (app.project_page
      .is_loaded()
      .empty_project_name_is(target_project_name)
-     .close_read_me(target_project_name))
+     .close_read_me())
 
 
-def test_new_page_elements(page: Page, login):
-    new_projecs = NewProjectsPage(page)
-    new_projecs.open()
-    new_projecs.is_loaded()
+def test_new_page_elements(app: Application, login):
+    app.new_projects_page.open()
+    app.new_projects_page.is_loaded()
 
 
-def test_new_project_creation(page: Page, login):
-    new_projecs = NewProjectsPage(page)
-    new_projecs.open()
-    new_projecs.is_loaded()
+def test_new_project_creation(app: Application, login):
+    app.new_projects_page.open()
+    app.new_projects_page.is_loaded()
 
     target_project_name = Faker().company()
-    new_projecs.fill_project_title(target_project_name)
-    new_projecs.click_create()
+    app.new_projects_page.fill_project_title(target_project_name)
+    app.new_projects_page.click_create()
 
-    ProjectPage(page).is_loaded()
+    app.project_page.is_loaded()
+
+    app.new_projects_page.open()
+    app.new_projects_page.is_loaded()
