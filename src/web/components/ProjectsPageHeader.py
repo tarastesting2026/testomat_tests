@@ -1,4 +1,4 @@
-from playwright.sync_api import Locator, Page, expect
+from playwright.sync_api import Page, expect
 
 
 class ProjectsPageHeader:
@@ -17,7 +17,6 @@ class ProjectsPageHeader:
 
         self.grid_view_button = page.locator("#grid-view")
         self.table_view_button = page.locator("#table-view")
-
 
     def select_project(self, query: str):
         self.search_input.fill(query)

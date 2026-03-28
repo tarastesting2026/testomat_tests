@@ -92,7 +92,7 @@ def test_clear_search_restores_projects(app: Application, login):
 
     app.projects_page.search_project("")
 
-    expect(app.projects_page._project_cards).not_to_have_count(1)
+    expect(app.projects_page.project_cards).not_to_have_count(1)
 
 
 def test_search_partial_match(app: Application, login):
@@ -131,7 +131,7 @@ def test_switch_back_to_grid_view(app: Application, login):
 def test_get_demo_cards_returns_one(app: Application, login):
     app.projects_page.is_loaded()
 
-    demo_cards_locator = app.projects_page.grid.cards.filter(
+    demo_cards_locator = app.projects_page.project_cards.filter(
         has=app.page.locator(".common-badge-project-demo")
     )
 
@@ -139,7 +139,7 @@ def test_get_demo_cards_returns_one(app: Application, login):
 
 
 def test_non_demo_card_has_no_demo_badge(app: Application, login):
-    card = app.projects_page.grid.get_card_by_title("Gaines Group")
+    card = app.projects_page.get_project_by_title("Gaines Group")
     expect(card.badges.filter(has_text="Demo")).to_have_count(0)
 
 
