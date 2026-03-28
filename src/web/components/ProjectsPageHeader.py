@@ -37,9 +37,6 @@ class ProjectsPageHeader:
     def switch_to_table_view(self):
         self.table_view_button.click()
 
-    # def get_selected_company(self) -> str:
-    #     return self.company_selector.locator('option[selected]').text_content()
-
     def get_selected_company(self, expected_value) -> str:
         return expect(self.company_selector.locator('option[selected]')).to_have_text(expected_value)
 
