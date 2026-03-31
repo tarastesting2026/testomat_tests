@@ -74,7 +74,7 @@ def test_create_new_project(page: Page, login):
     page.get_by_placeholder("First Suite").fill(suite_name)
     page.get_by_role("button", name="Suite").click()
 
-    expect(page.locator("span.mr-1")).to_contain_text(suite_name)
+    expect(page.locator("a", has_text=suite_name)).to_be_visible()
 
     page.get_by_role("link", name="New test").click()
 
