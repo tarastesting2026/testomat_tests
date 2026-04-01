@@ -11,3 +11,6 @@ env/
 
 # environment variables
 .env
+
+# folder with test reports
+test-result
