@@ -2,7 +2,7 @@ from typing import Self
 
 from playwright.sync_api import Page, expect
 
-from src.web.components.SideBar import SideBar
+from src.web.components.side_bar import SideBar
 
 
 class ProjectPage:
@@ -23,3 +23,4 @@ class ProjectPage:
 
     def close_read_me(self) -> Self:
         self.page.locator(".back .third-btn").click()
+        return self

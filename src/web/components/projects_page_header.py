@@ -13,7 +13,7 @@ class ProjectsPageHeader:
         self.search_input = page.locator("#search")
 
         self.create_button = page.locator("a.common-btn-primary", has_text="Create")
-        self.manage_button = page.locator("a.common-btn-secondary", has_text="Mange")
+        self.manage_button = page.locator("a.common-btn-secondary", has_text="Manage")
 
         self.grid_view_button = page.locator("#grid-view")
         self.table_view_button = page.locator("#table-view")

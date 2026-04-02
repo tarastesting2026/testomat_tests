@@ -5,15 +5,10 @@ import pytest
 from load_dotenv import load_dotenv
 from playwright.sync_api import Page, BrowserContext, sync_playwright, Browser
 
-from src.web.Application import Application
+from src.utils.browser import build_browser_context, clear_browser_state
+from src.web import Application
 
 load_dotenv()
-
-
-def clear_browser_state(page: Page) -> None:
-    page.context.clear_cookies()
-    page.evaluate("window.localStorage.clear()")
-    page.evaluate("window.sessionStorage.clear()")
 
 
 @dataclass(frozen=True)
@@ -44,8 +39,7 @@ def browser_instance():
 
 @pytest.fixture(scope="function")
 def app(browser_instance: Browser, configs: Config) -> Application:
-    context = build_browser_instance(browser_instance, configs)
-
+    context = build_browser_context(browser_instance, configs)
     page = context.new_page()
     yield Application(page)
     page.close()
@@ -54,8 +48,7 @@ def app(browser_instance: Browser, configs: Config) -> Application:
 
 @pytest.fixture(scope="session")
 def logged_context(browser_instance: Browser, configs: Config) -> BrowserContext:
-    context = build_browser_instance(browser_instance, configs)
-
+    context = build_browser_context(browser_instance, configs)
     page = context.new_page()
     app = Application(page)
     app.login_page.open()
@@ -75,27 +68,15 @@ def logged_app(logged_context: BrowserContext) -> Application:
 
 
 @pytest.fixture(scope="module")
-def shared_browser(browser_instance: Browser, configs: Config) -> Page:
-    context = build_browser_instance(browser_instance, configs)
-
+def module_page(browser_instance: Browser, configs: Config) -> Page:
+    context = build_browser_context(browser_instance, configs)
     page = context.new_page()
     yield page
     page.close()
     context.close()
 
 
-def build_browser_instance(browser_instance: Browser, configs: Config) -> BrowserContext:
-    return browser_instance.new_context(
-        base_url=configs.app_base_url,
-        viewport={"width": 1920, "height": 1080},
-        locale="uk-UA",
-        timezone_id="Europe/Kyiv",
-        record_video_dir="videos/",
-        permissions=["geolocation"],
-    )
-
-
 @pytest.fixture(scope="function")
-def shared_page(shared_browser: Page) -> Application:
-    yield Application(shared_browser)
-    clear_browser_state(shared_browser)
+def shared_app(module_page: Page) -> Application:
+    yield Application(module_page)
+    clear_browser_state(module_page)

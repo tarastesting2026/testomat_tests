@@ -14,3 +14,9 @@ env/
 
 # folder with test reports
 test-result
+
+# Playwright auth state (contains session tokens)
+auth.json
+
+# Test video recordings
+videos/
