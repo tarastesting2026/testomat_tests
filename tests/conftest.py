@@ -3,12 +3,28 @@ from dataclasses import dataclass
 
 import pytest
 from load_dotenv import load_dotenv
-from playwright.sync_api import Page, BrowserContext, sync_playwright, Browser
+from playwright.sync_api import Browser, BrowserContext, Page, sync_playwright
 
-from src.utils.browser import build_browser_context, clear_browser_state
 from src.web import Application
 
 load_dotenv()
+
+
+def clear_browser_state(page: Page) -> None:
+    page.context.clear_cookies()
+    page.evaluate("window.localStorage.clear()")
+    page.evaluate("window.sessionStorage.clear()")
+
+
+def build_browser_context(browser: Browser, config) -> BrowserContext:
+    return browser.new_context(
+        base_url=config.app_base_url,
+        viewport={"width": 1920, "height": 1080},
+        locale="uk-UA",
+        timezone_id="Europe/Kyiv",
+        record_video_dir="videos/",
+        permissions=["geolocation"],
+    )
 
 
 @dataclass(frozen=True)
