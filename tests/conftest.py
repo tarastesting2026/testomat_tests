@@ -2,7 +2,7 @@ import os
 from dataclasses import dataclass
 
 import pytest
-from load_dotenv import load_dotenv
+from dotenv import load_dotenv
 from playwright.sync_api import Browser, BrowserContext, Page, sync_playwright
 
 from src.web import Application
@@ -48,7 +48,7 @@ def configs():
 @pytest.fixture(scope="session")
 def browser_instance():
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=False, slow_mo=150, timeout=30000)
+        browser = p.chromium.launch(headless=False, slow_mo=175, timeout=30000)
         yield browser
         browser.close()
 
