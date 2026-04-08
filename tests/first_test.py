@@ -14,7 +14,7 @@ def login(page: Page, configs: Config):
     page.goto(configs.login_url)
     login_user(page, configs.email, configs.password)
 
-
+@pytest.mark.skip("because we have removed playwright-pytest library")
 def test_login_with_invalid_creds(page: Page, configs: Config):
     open_home_page(page)
 
@@ -28,13 +28,13 @@ def test_login_with_invalid_creds(page: Page, configs: Config):
     expect(page.locator("#content-desktop").get_by_text("Invalid Email or password.")).to_be_visible()
     expect(page.locator("#content-desktop .common-flash-info")).to_have_text("Invalid Email or password.")
 
-
+@pytest.mark.skip("because we have removed playwright-pytest library")
 def test_search_project_in_company(page: Page, login):
     search_for_project(page, TARGET_PROJECT)
 
     expect(page.get_by_role("heading", name=TARGET_PROJECT)).to_be_visible()
 
-
+@pytest.mark.skip("because we have removed playwright-pytest library")
 def test_should_be_possible_to_open_free_project(page: Page, login):
     # actr
     page.locator("#company_id").click()
@@ -47,12 +47,12 @@ def test_should_be_possible_to_open_free_project(page: Page, login):
 
     expect(page.get_by_text("You have not created any projects yet")).to_be_visible(timeout=10000)
 
-
+@pytest.mark.skip("because we have removed playwright-pytest library")
 def test_registered_email_is_correct(page: Page, configs: Config, login):
     page.locator("#user-menu-button").click()
     expect(page.locator(".auth-header-nav-right-dropdown-menu-block-email")).to_have_text(configs.email)
 
-
+@pytest.mark.skip("because we have removed playwright-pytest library")
 def test_create_new_project(page: Page, login):
     page.get_by_role("link", name="Create").click()
 
