@@ -56,12 +56,12 @@ invalid_login_test_data = [
 @pytest.mark.smoke
 @pytest.mark.web
 @pytest.mark.parametrize("email, password", invalid_login_test_data)
-def test_login_invalid(shared_app: Application, email: str, password: str):
-    shared_app.login_page.open()
-    shared_app.login_page.is_loaded()
-    shared_app.login_page.login_user(email, password)
-    shared_app.login_page.invalid_login_message_visible()
-    shared_app.page.wait_for_timeout(2000)
+def test_login_invalid(shared_page: Application, email: str, password: str):
+    shared_page.login_page.open()
+    shared_page.login_page.is_loaded()
+    shared_page.login_page.login_user(email, password)
+    shared_page.login_page.invalid_login_message_visible()
+    shared_page.page.wait_for_timeout(2000)
 
 
 @pytest.mark.smoke
