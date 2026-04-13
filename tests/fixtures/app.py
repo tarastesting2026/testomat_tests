@@ -75,7 +75,6 @@ def logged_page(browser_instance: Browser, configs) -> BrowserContext:
     context.storage_state(path=STORAGE_STATE_PATH)
     create_free_project_state()
 
-    # page.close()
     yield context
     context.close()
 
