@@ -34,7 +34,13 @@ class ProjectPage:
         return self
 
     def create_test_suite_via_popup(self):
-        self.page.locator(".md-icon-chevron-down").click()
+        first_suite_input = self.page.locator("[placeholder='First Suite']")
+        if first_suite_input.is_visible():
+            first_suite_input.fill("_")
+            suite_btn = self.page.get_by_role("button", name="Suite")
+            suite_btn.click()
+            suite_btn.wait_for(state="hidden")
+        self.page.locator(".sticky-header").locator(".md-icon-chevron-down").click()
         self.page.get_by_text("Collection of test cases").click()
 
     def create_first_suite(self, target_suite_name: str):
