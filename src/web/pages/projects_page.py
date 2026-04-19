@@ -1,7 +1,9 @@
-from playwright.sync_api import Page, Locator, expect
+from typing import Self
 
-from src.web.components.ProjectCard import ProjectCard
-from src.web.components.ProjectsPageHeader import ProjectsPageHeader
+from playwright.sync_api import Locator, Page, expect
+
+from src.web.components.project_card import ProjectCard
+from src.web.components.projects_page_header import ProjectsPageHeader
 
 
 class ProjectsPage:
@@ -18,16 +20,34 @@ class ProjectsPage:
         self.total_count = page.locator(".common-counter")
         self.page_heading = page.locator(".common-page-header h2")
 
-    def is_loaded(self):
-        expect(self.page.locator("h2")).to_have_text("Projects")
-        expect(self.project_cards.first).to_be_visible()
+    def open(self, url: str = '/projects') -> Self:
+        self.page.goto(url)
+        return self
 
-    def verify_page_loaded(self):
+    def get_project_by_title(self, title: str) -> ProjectCard:
+        card = self._project_cards.filter(has=self.page.locator(selector='h3', has_text=title)).first
+        return ProjectCard(card)
+
+    def count_of_projects_visible(self, expected_count: int) -> Self:
+        expect(self._project_cards.filter(visible=True)).to_have_count(expected_count)
+        return self
+
+    def get_total_projects(self) -> int:
+        return int(self.total_count.text_content())
+
+    def search_and_get_results(self, query: str) -> list[ProjectCard]:
+        self.header.search_project(query)
+        self.page.wait_for_timeout(300)
+        return self.get_projects()
+
+    def is_loaded(self) -> Self:
         expect(self.header.page_title).to_be_visible()
         expect(self.projects_grid).to_be_visible()
+        return self
 
     def verify_success_message(self, expected_text: str):
         expect(self.success_message).to_have_text(expected_text)
+        return Self
 
     def get_demo_projects(self) -> list[ProjectCard]:
         return [project for project in self.get_projects() if project.is_demo()]
@@ -41,11 +61,8 @@ class ProjectsPage:
     def projects_count_is(self, count: int):
         expect(self.visible_project_cards()).to_have_count(count)
 
-    def get_all_projects(self) -> list[ProjectCard]:
-        return [
-            ProjectCard(card)
-            for card in self.project_cards.all()
-        ]
+    def get_projects(self) -> list[ProjectCard]:
+        return [ProjectCard(card) for card in self.project_cards.all()]
 
     def get_project_by_index(self, index: int) -> ProjectCard:
         return ProjectCard(self.project_cards.nth(index))
@@ -91,13 +108,6 @@ class ProjectsPage:
 
     def get_success_message(self) -> str:
         return self.success_message.text_content().strip()
-
-    def get_projects(self) -> list[ProjectCard]:
-        return [ProjectCard(card) for card in self.project_cards.all()]
-
-    def get_project_by_title(self, title: str) -> ProjectCard:
-        card = self.project_cards.filter(has=self.page.locator("h3", has_text=title)).first
-        return ProjectCard(card)
 
     def count_of_project_visibility(self, expected_count: int):
         return expect(self.project_cards.filter(visible=True)).to_have_count(expected_count)

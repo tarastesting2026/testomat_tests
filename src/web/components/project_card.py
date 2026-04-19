@@ -24,5 +24,8 @@ class ProjectCard:
     def has_badge(self, label: str) -> bool:
         return any(l.lower() == label.lower() for l in self.get_badge_labels())
 
+    def is_demo(self) -> bool:
+        return self.has_badge("Demo")
+
     def open(self) -> None:
         self.link.click()
