@@ -3,12 +3,16 @@ from pathlib import Path
 
 import pytest
 from playwright.sync_api import Browser, BrowserContext, Page, expect
+from pygments.lexers import configs
 
 from src.web import Application
+from tests.conftest import TEST_RESULT_DIR
+from tests.fixtures.config import Config
 from tests.fixtures.cookie_helper import CookieHelper, clear_browser_state
 
 STORAGE_STATE_PATH = Path("test-result/.auth/storage_state.json")
 FREE_PROJECT_STORAGE_PATH = Path("test-result/.auth/free_project_state.json")
+TRACES_DIR = TEST_RESULT_DIR / "traces"
 
 
 def create_free_project_state() -> None:
@@ -26,66 +30,80 @@ def create_free_project_state() -> None:
     FREE_PROJECT_STORAGE_PATH.write_text(json.dumps(obj=state, indent=2))
 
 
-def build_browser_context(
+def get_or_create_context(
         browser: Browser,
         base_url: str,
-        storage_state: Path | None = None,
-) -> BrowserContext:
+        storage_path: Path,
+) -> tuple[BrowserContext, bool]:
+    """
+    Returns context and flag indicating if login is needed.
+
+    If storage exists → load it, no login needed
+    If not → create fresh context, login needed
+    """
+    has_state = storage_path.exists()
+
     kwargs = {
         "base_url": base_url,
         "viewport": {"width": 1920, "height": 1080},
         "locale": "uk-UA",
         "timezone_id": "Europe/Kyiv",
-        "record_video_dir": "test-result/videos/",
+        "record_video_dir": str(TEST_RESULT_DIR / "videos"),
         "permissions": ["geolocation"],
     }
-    if storage_state and storage_state.exists():
-        kwargs["storage_state"] = str(storage_state)
-    return browser.new_context(**kwargs)
+    if has_state:
+        kwargs["storage_state"] = str(storage_path)
+
+    context = browser.new_context(**kwargs)
+    return context, not has_state  # needs_login = True if no state
 
 
-@pytest.fixture(scope="function")
-def app(browser_instance: Browser, configs) -> Application:
-    """Clean app - fresh page per test (function scope)."""
-    context = build_browser_context(browser=browser_instance, base_url=configs.app_base_url)
-    page = context.new_page()
-    yield Application(page)
-    page.close()
-    context.close()
+def save_storage_state(context: BrowserContext, path: Path) -> None:
+    """Save browser state for reuse."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    context.storage_state(path=path)
+
+
+def start_tracing(page: Page) -> None:
+    page.context.tracing.start(screenshots=True, snapshots=True, sources=True)
+
+
+def stop_tracing_on_failure(page: Page, request: pytest.FixtureRequest) -> None:
+    """Stop tracing and save only if test failed."""
+    failed = hasattr(request.node, "rep_call") and request.node.rep_call.failed
+    if failed:
+        trace_path = TRACES_DIR / f"{request.node.name}.zip"
+        trace_path.parent.mkdir(parents=True, exist_ok=True)
+        page.context.tracing.stop(path=trace_path)
+    else:
+        page.context.tracing.stop()
 
 
 @pytest.fixture(scope="session")
-def logged_page(browser_instance: Browser, configs) -> BrowserContext:
-    """Logged context - reuses authenticated session (session scope)."""
-    if STORAGE_STATE_PATH.exists():
-        context = build_browser_context(browser=browser_instance, base_url=configs.app_base_url,
-                                        storage_state=STORAGE_STATE_PATH)
-        yield context
-        context.close()
-        return
-
-    context = build_browser_context(browser=browser_instance, base_url=configs.app_base_url)
+def logged_page(browser_instance: Browser, configs) -> Page:
+    """Session-scoped: reuses authentication."""
+    context, needs_login = get_or_create_context(browser=browser_instance, base_url=configs.app_base_url,
+                                                 storage_path=STORAGE_STATE_PATH)
     page = context.new_page()
-    app = Application(page)
-    app.login_page.open()
-    app.login_page.is_loaded()
-    app.login_page.login_user(configs.email, configs.password)
 
-    STORAGE_STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
-    context.storage_state(path=STORAGE_STATE_PATH)
-    create_free_project_state()
+    if needs_login:
+        open_login_and_authorize(configs=configs, page=page)
+        save_storage_state(context=context, path=STORAGE_STATE_PATH)
+        create_free_project_state()
 
-    yield context
+    yield page
     context.close()
 
 
 @pytest.fixture(scope="function")
-def logged_app(logged_page: BrowserContext) -> Application:
-    """Logged app - new page from authenticated context for each test."""
-    page = logged_page.new_page()
-    page.goto("/projects")
-    yield Application(page)
-    page.close()
+def logged_app(logged_page: Page, request: pytest.FixtureRequest) -> Application:
+    """Function-scoped: tracing per test, saves trace only on failure."""
+    start_tracing(logged_page)
+    logged_page.goto("/projects")
+
+    yield Application(logged_page)
+
+    stop_tracing_on_failure(logged_page, request=request)
 
 
 @pytest.fixture(scope="function")
@@ -97,7 +115,7 @@ def cookies(logged_page: BrowserContext) -> CookieHelper:
 @pytest.fixture(scope="module")
 def shared_browser(browser_instance: Browser, configs) -> Page:
     """Shared page for parametrized tests (module scope) - reuses same page across test params."""
-    context = build_browser_context(browser=browser_instance, base_url=configs.app_base_url)
+    context = get_or_create_context(browser=browser_instance, configs=configs)
     page = context.new_page()
     yield page
     page.close()
@@ -112,36 +130,40 @@ def shared_page(shared_browser: Page) -> Application:
 
 
 @pytest.fixture(scope="session")
-def free_project_page(logged_page: BrowserContext, browser_instance: Browser, configs) -> Page:
-    if FREE_PROJECT_STORAGE_PATH.exists():
-        context = build_browser_context(browser=browser_instance, base_url=configs.app_base_url,
-                                        storage_state=FREE_PROJECT_STORAGE_PATH)
-        page = context.new_page()
-        yield page
-        context.close()
-        return
-
-    context = build_browser_context(browser=browser_instance, base_url=configs.app_base_url)
+def free_project_page(browser_instance: Browser, configs) -> Page:
+    """Session-scoped: reuses free project authentication."""
+    context, needs_login = get_or_create_context(browser=browser_instance, base_url=configs.app_base_url,
+                                                 storage_path=FREE_PROJECT_STORAGE_PATH)
     page = context.new_page()
-    app = Application(page)
-    app.login_page.open()
-    app.login_page.is_loaded()
-    app.login_page.login_user(configs.email, configs.password)
 
-    app.projects_page.is_loaded()
-    app.projects_page.open()
-    app.projects_page.header.select_company("Free Projects")
-    expect(app.projects_page.header.free_plan_label).to_be_visible()
+    if needs_login:
+        app = open_login_and_authorize(configs=configs, page=page)
 
-    FREE_PROJECT_STORAGE_PATH.parent.mkdir(parents=True, exist_ok=True)
-    context.storage_state(path=FREE_PROJECT_STORAGE_PATH)
+        app.projects_page.is_loaded()
+        app.projects_page.open()
+        app.projects_page.header.select_company("Free Projects")
+        expect(app.projects_page.header.free_plan_label).to_be_visible()
+
+        save_storage_state(context=context, path=FREE_PROJECT_STORAGE_PATH)
 
     yield page
     context.close()
 
 
+def open_login_and_authorize(configs: Config, page: Page) -> Application:
+    app = Application(page)
+    app.login_page.open()
+    app.login_page.is_loaded()
+    app.login_page.login_user(configs.email, configs.password)
+    return app
+
+
 @pytest.fixture(scope="function")
-def free_project_app(free_project_page: Page) -> Application:
+def free_project_app(free_project_page: Page, request: pytest.FixtureRequest) -> Application:
+    """Function-scoped: tracing per test, saves trace only on failure."""
+    start_tracing(free_project_page)
     free_project_page.goto("/projects")
+
     yield Application(free_project_page)
-    free_project_page.close()
+
+    stop_tracing_on_failure(page=free_project_page, request=request)
