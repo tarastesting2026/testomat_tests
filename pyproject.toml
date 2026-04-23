@@ -9,7 +9,11 @@ dependencies = [
     "faker==40.11.0",
     "pytest-html==4.2.0",
     "pytest-playwright==0.7.2",
+    "pydantic>=2.0.0",
     "requests==2.32.3",
+    "httpx>=0.28.0",
+    "selenium>=4.43.0",
+    "webdriver-manager>=4.0.0",
 ]
 
 [tool.pytest.ini_options]
